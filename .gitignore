@@ -1,0 +1,38 @@
+# Ignore everything
+/*
+!.gitignore
+# Except the relevant folders
+!content/
+content/*
+!content/dota_addons/
+content/dota_addons/*
+!content/dota_addons/war_of_aghanim/
+
+!game/
+game/*
+!game/dota_addons/
+game/dota_addons/*
+!game/dota_addons/war_of_aghanim/
+
+# Cache crap that Valve autogenerates
+*.bin
+*.cfg
+
+# Compiled formats
+*.vpcf_c
+*.vtex_c
+*.vsndevts_c
+*.vsnd_c
+*.vmat_c
+*.vjs_c
+*.vxml_c
+*.vcss_c
+
+# Map files
+*.vpk
+
+# Map overviews
+resource/overviews/*
+
+#Github dump
+*.stackdump
