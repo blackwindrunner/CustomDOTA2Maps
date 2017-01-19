@@ -33,6 +33,8 @@ function CAddonAdvExGameMode:InitGameMode()
 	GameRules:SetGoldPerTick(10) --没分钟金钱增长
 	--GameRules:SetStartingGold(3000) -- 初始化金币
 	ListenToGameEvent("game_rules_state_change", Dynamic_Wrap(CAddonAdvExGameMode,"OnGameRulesStateChange"), self)
+	ListenToGameEvent("entity_killed", Dynamic_Wrap(CAddonAdvExGameMode,"OnEntityKilled"), self)
+	 
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap(CAddonAdvExGameMode, "ItemAddedFilter"), self )
 	--ListenToGameEvent("player_spawn", Dynamic_Wrap(CAddonAdvExGameMode, "OnPlayerSpawn"), self)
 	ListenToGameEvent("npc_spawned", Dynamic_Wrap(CAddonAdvExGameMode, "OnNPCSpawn"), self)
@@ -51,6 +53,9 @@ function CAddonAdvExGameMode:InitGameMode()
 	--GameRules:SetGoldTickTime( 60.0 )
 	GameRules:SetGoldPerTick( 1.7 )
 
+	GameRules:SetHeroMinimapIconScale( MINIMAP_ICON_SIZE )
+	GameRules:SetCreepMinimapIconScale( MINIMAP_CREEP_ICON_SIZE )
+	GameRules:SetRuneMinimapIconScale( MINIMAP_RUNE_ICON_SIZE )
 	
 	--GameRules:GetGameModeEntity():SetRemoveIllusionsOnDeath( true )
 	--GameRules:GetGameModeEntity():SetTopBarTeamValuesOverride( true )
@@ -188,7 +193,7 @@ end
 
 function CAddonAdvExGameMode:OnPlayerSpawn(keys)
 	--print(keys)
-	DeepPrintTable(keys)
+	--DeepPrintTable(keys)
 	--print(keys.userid)
 	local attacker = EntIndexToHScript(keys.userid)
 	attacker:MakeRandomHeroSelection()
@@ -208,7 +213,7 @@ function CAddonAdvExGameMode:OnNPCSpawn(keys)
 	if(entity:IsRealHero() and not entity:HasModifier("modifier_item_ultimate_scepter_consumed")) then
     	
     	--print(entity:GetUnitName())
-    	print(MEEPO_FLAG)
+    	--print(MEEPO_FLAG)
     	--if(entity:GetUnitName()~="npc_dota_hero_meepo" or print(MEEPO_FLAG)==0) then 
     		local item_scepter=entity:AddItemByName("item_ultimate_scepter")
     		entity:TakeItem(item_scepter)
@@ -229,7 +234,9 @@ function CAddonAdvExGameMode:OnNPCSpawn(keys)
     	  		
     	--end
 
-    	
+    else 
+    	--entity:SetPhysicalArmorBaseValue(entity:GetPhysicalArmorValue()*2)
+    	--entity:SetBaseMagicalResistanceValue(entity:GetBaseMagicalResistanceValue*2)
   	end
 	--print("qian="..entity:GetGoldBounty())
 	--attacker:AddNewModifier(keys,nil,"modifier_item_ultimate_scepter",nil)
@@ -272,3 +279,22 @@ function CAddonAdvExGameMode:OnHeroInGame(hero)
   hero:AddAbility("example_ability")]]
 end
 
+function CAddonAdvExGameMode:OnEntityKilled(keys)
+	
+	--keys.userid
+	--SetBuybackCooldownTime
+	local entity = EntIndexToHScript(keys.entindex_killed)
+	if(entity:IsRealHero() )then
+		--print(entity:GetName())
+		entity:SetBuybackCooldownTime(entity:GetRespawnTime()*0.2) --buy back time is reduced 80%
+		if(entity:HasModifier("modifier_necrolyte_reapers_scythe_respawn_time"))then
+			entity:SetBuyBackDisabledByReapersScythe(true)
+		end
+		--print(entity:GetRespawnTime())
+		entity:SetTimeUntilRespawn(entity:GetRespawnTime()*0.75) --respawn time is reduced 25%
+		--print(entity:IsBuybackDisabledByReapersScythe())
+		
+	end
+
+	
+end

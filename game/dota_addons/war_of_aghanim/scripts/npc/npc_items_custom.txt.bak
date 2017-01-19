@@ -76,7 +76,52 @@
 			}
 		}
 
-		
+		"Modifiers"
+		{
+			"modifier_imba_rune_haste_owner"
+			{
+				"Passive"						"0"
+				"IsHidden"						"0"
+				"IsBuff"						"1"
+				"IsPurgable"					"1"
+
+				"AbilityTextureName"			"custom/imba_rune_haste"
+
+				"EffectName"					"particles/generic_gameplay/rune_haste_owner.vpcf"
+				"EffectAttachType"				"follow_origin"
+
+				"Duration"						"%duration"
+
+				"Aura"							"modifier_imba_rune_haste_aura"
+				"Aura_Radius"					"%aura_radius"
+				"Aura_Teams"					"DOTA_UNIT_TARGET_TEAM_FRIENDLY"
+				"Aura_Types"					"DOTA_UNIT_TARGET_HERO | DOTA_UNIT_TARGET_BASIC"
+				"Aura_Flags"					"DOTA_UNIT_TARGET_FLAG_NONE"
+
+				"Properties"
+				{
+					"MODIFIER_PROPERTY_MOVESPEED_BONUS_PERCENTAGE"	"%bonus_ms_owner"
+					"MODIFIER_PROPERTY_ATTACKSPEED_BONUS_CONSTANT"	"%bonus_as_owner"
+				}
+			}
+
+			"modifier_imba_rune_haste_aura"
+			{
+				"Passive"						"0"
+				"IsHidden"						"1"
+				"IsBuff"						"1"
+				"IsPurgable"					"0"
+
+				"EffectName"					"particles/generic_gameplay/rune_haste_owner.vpcf"
+				"EffectAttachType"				"follow_origin"
+
+				"Properties"
+				{
+					"MODIFIER_PROPERTY_MOVESPEED_BONUS_PERCENTAGE"	"%bonus_ms_aura"
+					"MODIFIER_PROPERTY_ATTACKSPEED_BONUS_CONSTANT"	"%bonus_as_aura"
+				}
+			}
+		}
 	}
 
 	//=================================================================================================================
