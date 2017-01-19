@@ -1,6 +1,7 @@
 require('timers')
 require('settings')
 require('rune')
+require('aghanim_dota')
 -- Create the class for the game mode, unused in this example as the functions for the quest are global
 if CAddonAdvExGameMode == nil then
 	CAddonAdvExGameMode = class({})
