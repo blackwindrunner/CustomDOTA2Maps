@@ -1,6 +1,6 @@
 # Ignore everything
 /*
-
+!.gitignore
 # Except the relevant folders
 !content/
 content/*
