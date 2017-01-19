@@ -1,8 +1,6 @@
 require('timers')
 require('settings')
-HERO_SELECTION_TIME = 50               -- How long should we let people select their hero?
-MEEPO_FLAG=0;
-RUNE_SPAWN_TIME = 120					-- How long in seconds should we wait between rune spawns?
+require('rune')
 -- Create the class for the game mode, unused in this example as the functions for the quest are global
 if CAddonAdvExGameMode == nil then
 	CAddonAdvExGameMode = class({})
@@ -92,7 +90,7 @@ function CAddonAdvExGameMode:OnGameRulesStateChange( keys )
         --游戏开始
          if newState==DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
          	print("game start")
-         	--SpawnImbaRunes()
+         	--SpawnRunes()
          	OnGameInProgress()
 
         --ShuaGuai()
@@ -126,7 +124,7 @@ function OnGameInProgress()
 	--  Rune timers setup
 	-------------------------------------------------------------------------------------------------
 	Timers:CreateTimer(0, function()
- 		SpawnImbaRunes()
+ 		SpawnRunes()
  		return RUNE_SPAWN_TIME
   	end)
 	
@@ -135,6 +133,7 @@ function CAddonAdvExGameMode:OnAllPlayersLoaded()
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap(CAddonAdvExGameMode, "ItemAddedFilter"), self )
 
 end
+
 -- Item added to inventory filter
 function CAddonAdvExGameMode:ItemAddedFilter( keys )
 	print("ItemAddedFilter")
@@ -183,76 +182,7 @@ function CAddonAdvExGameMode:ItemAddedFilter( keys )
 	end
 	return true
 end
--- Spawns runes on the map
-function SpawnImbaRunes()
 
-	-- Locate the rune spots on the map
-	local bounty_rune_locations = Entities:FindAllByName("dota_item_rune_spawner_bounty")
-	--local powerup_rune_locations = Entities:FindAllByName("dota_item_rune_spawner_powerup")
-	DeepPrintTable(bounty_rune_locations)
-	DeepPrintTable(powerup_rune_locations)
-	-- Spawn bounty runes
-	local game_time = GameRules:GetDOTATime(false, false)
-	for _, bounty_loc in pairs(bounty_rune_locations) do
-		local bounty_rune = CreateItem("item_rune_bounty", nil, nil)
-		 CreateItemOnPositionForLaunch(bounty_loc:GetAbsOrigin(), bounty_rune)
-
-		-- If these are the 00:00 runes, double their worth
-		if game_time < 1 then
-			bounty_rune.is_initial_bounty_rune = true
-		end
-	end
---[[
-	-- List of powerup rune types
-	local powerup_rune_types = {
-		"item_rune_double_damage",
-		"item_rune_haste",
-		"item_rune_regeneration"
-	}
-
-	-- Spawn a random powerup rune in a random powerup location
-	if game_time > 1 then
-		CreateItemOnPositionForLaunch(powerup_rune_locations[RandomInt(1, #powerup_rune_locations)]:GetAbsOrigin(), CreateItem(powerup_rune_types[RandomInt(1, #powerup_rune_types)], nil, nil))
-	end]]
-end
-
--- Picks up a bounty rune
-function PickupBountyRune(item, unit)
-	print("PickupBountyRune")
-	-- Bounty rune parameters
-	local base_bounty = 200
-	local bounty_per_minute = 5
-	local game_time = GameRules:GetDOTATime(false, false)
-	local current_bounty = base_bounty + bounty_per_minute * game_time / 60
-
-	-- If this is the first bounty rune spawn, double the base bounty
-	if item.is_initial_bounty_rune then
-		current_bounty = base_bounty * 1
-	end
-
-	-- Adjust value for lobby options
-	--current_bounty = current_bounty * (1 + CUSTOM_GOLD_BONUS * 0.01)
-
-	-- Grant the unit experience
-	--unit:AddExperience(current_bounty, DOTA_ModifyXP_CreepKill, false, true)
-	unit:AddExperience(current_bounty, DOTA_ModifyXP_CreepKill, false, true)
-	-- If this is alchemist, increase the gold amount
-	if unit:FindAbilityByName("alchemist_goblins_greed") and unit:FindAbilityByName("alchemist_goblins_greed"):GetLevel() > 0 then
-		current_bounty = current_bounty * 2
-	end
-
-	-- Grant the unit gold
-	unit:ModifyGold(current_bounty, false, DOTA_ModifyGold_CreepKill)
-
-	-- Show the gold gained message to everyone
-	SendOverheadEventMessage(nil, OVERHEAD_ALERT_GOLD, unit, current_bounty, nil)
-
-	-- Play the gold gained sound
-	unit:EmitSound("General.Coins")
-
-	-- Play the bounty rune activation sound to the unit's team
-	EmitSoundOnLocationForAllies(unit:GetAbsOrigin(), "Rune.Bounty", unit)
-end
 
 
 function CAddonAdvExGameMode:OnPlayerSpawn(keys)
@@ -308,36 +238,5 @@ function CAddonAdvExGameMode:OnNPCSpawn(keys)
 		
 	
 	--attacker:AddItemByName("item_ultimate_scepter")
-end
-
-function CAddonAdvExGameMode:OnHeroInGame(hero)
-  print("[DOTA2IMBA] Hero spawned in game for first time -- " .. hero:GetUnitName())
-
-  --[[ Multiteam configuration, currently unfinished
-  local team = "team1"
-  local playerID = hero:GetPlayerID()
-  if playerID > 3 then
-    team = "team2"
-  end
-  print("setting " .. playerID .. " to team: " .. team)
-  MultiTeam:SetPlayerTeam(playerID, team)]]
-
-  -- This line for example will set the starting gold of every hero to 500 unreliable gold
-  hero:SetGold(3000, false)
-	local level = hero:GetLevel()
-      while level < 6 do
-        hero:AddExperience (2000,0,false,false)
-        level = hero:GetLevel()
-      end
-
-  -- These lines will create an item and add it to the player, effectively ensuring they start with the item
-  --local item = CreateItem("item_multiteam_action", hero, hero)
-  --hero:AddItem(item)
-
-  --[[ --These lines if uncommented will replace the W ability of any hero that loads into the game
-    --with the "example_ability" ability
-  local abil = hero:GetAbilityByIndex(1)
-  hero:RemoveAbility(abil:GetAbilityName())
-  hero:AddAbility("example_ability")]]
 end
 
