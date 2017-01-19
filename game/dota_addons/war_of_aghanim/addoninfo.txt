@@ -1,0 +1,13 @@
+"AddonInfo"
+{
+	"addontitle"					"War Of Aghanim"
+	"addon_game_name"				"War Of Aghanim"
+	"addonversion"					"0.02"
+	"addontagline"					"WOA"
+	"addonauthor"					"ghost"
+	"maps"						"dota"
+	"dota"
+	{
+		"MaxPlayers"				"20"
+	}
+}
