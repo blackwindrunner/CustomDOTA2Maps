@@ -1,11 +1,11 @@
 if AddonAdventure == nil then
-    print ( '[DOTA2IMBA] creating DOTA2IMBA game mode' )
+    print ( '[DOTA2AHA] creating DOTA2IMBA game mode' )
     AddonAdventure = class({})
 end
 
 
 function AddonAdventure:OnHeroInGame(hero)
-  print("[DOTA2IMBA] Hero spawned in game for first time -- " .. hero:GetUnitName())
+  print("[DOTA2AHA] Hero spawned in game for first time -- " .. hero:GetUnitName())
 
   --[[ Multiteam configuration, currently unfinished
   local team = "team1"

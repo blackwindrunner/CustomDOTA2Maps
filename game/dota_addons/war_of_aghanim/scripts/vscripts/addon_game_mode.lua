@@ -31,7 +31,7 @@ end
 function CAddonAdvExGameMode:InitGameMode()
 	print( "Adventure Example loaded." )
 	GameRules:SetCustomGameSetupAutoLaunchDelay(15)--队伍分配时间
-	GameRules:SetGoldPerTick(10) --没分钟金钱增长
+	GameRules:SetGoldPerTick(10) --每分钟金钱增长
 	--GameRules:SetStartingGold(3000) -- 初始化金币
 	ListenToGameEvent("game_rules_state_change", Dynamic_Wrap(CAddonAdvExGameMode,"OnGameRulesStateChange"), self)
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap(CAddonAdvExGameMode, "ItemAddedFilter"), self )
@@ -323,10 +323,10 @@ function CAddonAdvExGameMode:OnHeroInGame(hero)
   MultiTeam:SetPlayerTeam(playerID, team)]]
 
   -- This line for example will set the starting gold of every hero to 500 unreliable gold
-  hero:SetGold(3000, false)
+  hero:SetGold(1200, false)
 	local level = hero:GetLevel()
       while level < 6 do
-        hero:AddExperience (2000,0,false,false)
+        hero:AddExperience (10,0,false,false)
         level = hero:GetLevel()
       end
 

@@ -3,7 +3,7 @@
 // Hero		currently on/off, will be # of instances (-1 = infinite)
 //
 
-"CustomHeroList"
+//"CustomHeroList"
 {
 	"npc_dota_hero_abaddon"				"1"	//—«∞Õ∂Ÿ
 	"npc_dota_hero_abyssal_underlord"		"0"	//¥Û∆®π…

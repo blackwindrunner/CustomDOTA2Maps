@@ -2,12 +2,32 @@
 {
 	"addontitle"					"War Of Aghanim"
 	"addon_game_name"				"War Of Aghanim"
-	"addonversion"					"0.02"
+	"addonversion"					"0.03"
 	"addontagline"					"WOA"
 	"addonauthor"					"ghost"
-	"maps"						"dota"
+	"maps"						"dota dota_summer  dota_autumn   dota_journey dota_reef dota_cravern "
 	"dota"
 	{
-		"MaxPlayers"				"20"
+					"MaxPlayers"                    "24"
+	}
+	"dota_autumn"
+	{
+					"MaxPlayers"                    "24"
+	}
+	"dota_summer"
+	{
+					"MaxPlayers"                    "24"
+	}
+	"dota_reef"
+	{
+					"MaxPlayers"                    "24"
+	}
+	"dota_journey"
+	{
+					"MaxPlayers"                    "24"
+	}
+	"dota_cravern"
+	{
+					"MaxPlayers"                    "24"
 	}
 }
