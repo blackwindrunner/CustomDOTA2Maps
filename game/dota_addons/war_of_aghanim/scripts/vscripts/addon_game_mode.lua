@@ -32,17 +32,22 @@ end
 -- Begins processing script for the custom game mode.  This "template_example" contains a main OnThink function.
 function CAddonAdvExGameMode:InitGameMode()
 	print( "Adventure Example loaded." )
-	GameRules:SetCustomGameSetupAutoLaunchDelay(15)--队伍分配时间
+	GameRules:SetCustomGameSetupAutoLaunchDelay(5)--队伍分配时间
 	GameRules:SetGoldPerTick(10) --每分钟金钱增长
 	--GameRules:SetStartingGold(3000) -- 初始化金币
 	ListenToGameEvent("game_rules_state_change", Dynamic_Wrap(CAddonAdvExGameMode,"OnGameRulesStateChange"), self)
-	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CAddonAdvExGameMode, "OnNPCSpawned" ), self )
+	ListenToGameEvent( "entity_killed", Dynamic_Wrap( CAddonAdvExGameMode, "OnEntityKilled" ), self )	
+	ListenToGameEvent( "entity_hurt", Dynamic_Wrap( CAddonAdvExGameMode, "OnEntityHurt" ), self )
 
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap(CAddonAdvExGameMode, "ItemAddedFilter"), self )
+	GameRules:GetGameModeEntity():SetFountainPercentageHealthRegen(10) --泉水回血百分比
+	GameRules:GetGameModeEntity():SetFountainPercentageManaRegen(10)	--泉水回魔百分比
+	GameRules:GetGameModeEntity():SetTowerBackdoorProtectionEnabled( true )
 	--ListenToGameEvent("player_spawn", Dynamic_Wrap(CAddonAdvExGameMode, "OnPlayerSpawn"), self)
 	ListenToGameEvent("npc_spawned", Dynamic_Wrap(CAddonAdvExGameMode, "OnNPCSpawn"), self)
 	GameRules:SetCustomGameTeamMaxPlayers( DOTA_TEAM_GOODGUYS, CUSTOM_TEAM_PLAYER_COUNT[DOTA_TEAM_GOODGUYS] )
 	GameRules:SetCustomGameTeamMaxPlayers( DOTA_TEAM_BADGUYS, CUSTOM_TEAM_PLAYER_COUNT[DOTA_TEAM_BADGUYS] )
+	
 	--GameRules:SetTimeOfDay( 0.75 )
 	--GameRules:SetHeroRespawnEnabled( false )
 	--GameRules:SetUseUniversalShopMode( true )
@@ -54,28 +59,120 @@ function CAddonAdvExGameMode:InitGameMode()
 	--GameRules:SetCreepMinimapIconScale( 0.7 )
 	--GameRules:SetRuneMinimapIconScale( 0.7 )
 	--GameRules:SetGoldTickTime( 60.0 )
-	GameRules:SetGoldPerTick( 1.7 )
+
+	GameRules:SetGoldTickTime( 0.4 ) -- default is 0.6
+	
 	--决策时间0
 	GameRules:SetStrategyTime( 0.0 )
 	--开始动画时间0
 	GameRules:SetShowcaseTime( 0.0 )
-	
+	--锁定(true)或解锁(false)队伍分配.。如果队伍分配被锁定，玩家将不再能修改队伍
+	GameRules:LockCustomGameSetupTeamAssignment(true)
+	--设置自动开始前的等待时间
+	GameRules:SetCustomGameSetupAutoLaunchDelay(1) 
 	--GameRules:GetGameModeEntity():SetRemoveIllusionsOnDeath( true )
 	--GameRules:GetGameModeEntity():SetTopBarTeamValuesOverride( true )
 	--GameRules:GetGameModeEntity():SetTopBarTeamValuesVisible( false )
 	self.couriers = {}
 end
+function GetActivePlayerCountForTeam(team)
+    local number = 0
+    for x=0,DOTA_MAX_TEAM do
+        local pID = PlayerResource:GetNthPlayerIDOnTeam(team,x)
+        if PlayerResource:IsValidPlayerID(pID) and (PlayerResource:GetConnectionState(pID) == 1 or PlayerResource:GetConnectionState(pID) == 2) then
+            number = number + 1
+        end
+    end
+    return number
+end
 
-function CAddonAdvExGameMode:OnNPCSpawned( event )
-	local spawnedUnit = EntIndexToHScript( event.entindex )
-
-	if spawnedUnit:IsRealHero() then
-		--设置信使可以被玩家控制
-		if self.couriers[spawnedUnit:GetTeamNumber()] then
-			self.couriers[spawnedUnit:GetTeamNumber()]:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
+function otherTeam(team)
+    if team == DOTA_TEAM_BADGUYS then
+        return DOTA_TEAM_GOODGUYS
+    elseif team == DOTA_TEAM_GOODGUYS then
+        return DOTA_TEAM_BADGUYS
+    end
+    return -1
+end
+---------------------------------------------------------------------------
+-- Event: OnEntityKilled 
+---------------------------------------------------------------------------
+function CAddonAdvExGameMode:OnEntityKilled( event )
+    local killedUnit = EntIndexToHScript( event.entindex_killed )
+    local killedTeam = killedUnit:GetTeam()
+    --print("fired")
+    if killedUnit:IsRealHero() and not killedUnit:IsReincarnating() then --处理英雄死亡时间
+	    local dotaTime = GameRules:GetDOTATime(false, false)
+	    local timeToStartReduction = 0 -- 20 minutes
+	    local respawnReduction = 0.75 -- Original Reduction rate
+	    killedUnit:SetBuybackCooldownTime(killedUnit:GetRespawnTime()*0.5) --buy back time is reduced 80%
+	    --killedUnit:SetBuybackGoldLimitTime(180);--设定买活后黄金收益受限的时间量。
+	    --如果中了nec的大，买活时间不缩短
+	    if(killedUnit:HasModifier("modifier_necrolyte_reapers_scythe_respawn_time"))then
+			killedUnit:SetBuyBackDisabledByReapersScythe(true)
 		end
+	    -- Reducation Rate slowly increases after a certain time, eventually getting to original levels, this is to prevent games lasting too long
+	    if dotaTime > timeToStartReduction then
+	    	dotaTime = dotaTime - timeToStartReduction
+	    	respawnReduction = respawnReduction + ((dotaTime / 60) / 100) -- 0.75 + Minutes of Game Time / 100 e.g. 25 minutes fo game time = 0.25
+	    end
 
+	    if respawnReduction > 1 then 
+	    	respawnReduction = 1
+	    end
+
+	    local timeLeft = killedUnit:GetRespawnTime()
+	 	timeLeft = timeLeft * respawnReduction -- Respawn time reduced by a rate
+	    
+	    -- Disadvantaged teams get 5 seconds less respawn time for every missing player
+	    local herosTeam = GetActivePlayerCountForTeam(killedUnit:GetTeamNumber())
+	    local opposingTeam = GetActivePlayerCountForTeam(otherTeam(killedUnit:GetTeamNumber()))
+	    local difference = herosTeam - opposingTeam   
+		   
+	    local addedTime = 0
+	    if difference < 0 then
+	        addedTime = difference * 5
+	        local RespawnReductionRate = string.format("%.2f", tostring(respawnReduction))
+		    local OriginalRespawnTime = tostring(math.floor(timeLeft))
+		    local TimeToReduce = tostring(math.floor(addedTime))
+		    local NewRespawnTime = tostring(math.floor(timeLeft + addedTime))
+	        --GameRules:SendCustomMessage( "ReductionRate:"  .. " " .. RespawnReductionRate .. " " .. "OriginalTime:" .. " " ..OriginalRespawnTime .. " " .. "TimeToReduce:" .. " " ..TimeToReduce .. " " .. "NewRespawnTime:" .. " " .. NewRespawnTime, 0, 0)
+	    end
+
+	    timeLeft = timeLeft + addedTime
+	    --print(timeLeft)
+
+	    if timeLeft < 1 then
+	        timeLeft = 1
+	    end
+
+	    killedUnit:SetTimeUntilRespawn(timeLeft)
+    end
+    
+end
+function CAddonAdvExGameMode:OnEntityHurt(event)
+	local onHurtUnit = EntIndexToHScript( event.entindex_killed )
+	if onHurtUnit:IsTower() then
 		
+		if onHurtUnit:GetBaseDamageMax() < 300 then
+			if onHurtUnit:GetHealthPercent() < 30 then
+				onHurtUnit:SetBaseDamageMax(onHurtUnit:GetBaseDamageMax()+3)
+				onHurtUnit:SetBaseDamageMin(onHurtUnit:GetBaseDamageMin()+3)
+				onHurtUnit:SetBaseHealthRegen(3)
+			else
+				onHurtUnit:SetBaseDamageMax(onHurtUnit:GetBaseDamageMax()+1)
+				onHurtUnit:SetBaseDamageMin(onHurtUnit:GetBaseDamageMin()+1)
+			end
+
+			if onHurtUnit:GetPhysicalArmorBaseValue() < 20 then
+				onHurtUnit:SetPhysicalArmorBaseValue(onHurtUnit:GetPhysicalArmorBaseValue()+1)
+			end
+		end
+		
+		
+		--onHurtUnit:SetHealth(onHurtUnit:GetHealth()*3)
+		--onHurtUnit:SetPhysicalArmorBaseValue(onHurtUnit:GetPhysicalArmorValue()*2)
+		--onHurtUnit:SetModelScale(1.3)
 	end
 end
 
@@ -158,16 +255,17 @@ function CAddonAdvExGameMode:OnGameRulesStateChange( keys )
 					self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
 				end
         elseif newState == DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
-                print("Player game begin")  --玩家开始游戏
+                print("Player game begin")  --玩家开始游戏.
+
  
         end
         if newState == DOTA_GAMERULES_STATE_PRE_GAME then --游戏开始前准备
             GameRules:SendCustomMessage("<font color='yellow'>游戏即将开始</font>",-1,1 )
              GameRules:SendCustomMessage("<font color='green'>神杖效果已注入英雄体内</font>",-1,1 )
             print("game start")
-
+            --Tutorial:ForceGameStart() --强制开始游戏
             -- AddNewModifier(1,nil,"modifier_item_ultimate_scepter",nil)
-             --print(self)
+            --print(self)
          end
 
         --游戏开始
@@ -351,7 +449,15 @@ function CAddonAdvExGameMode:OnNPCSpawn(keys)
   	local entity = EntIndexToHScript(keys.entindex)
   	--print(entity:GetUnitName())
   	--print("NAME == ".. entity:GetUnitName())
- 	
+ 	if entity:IsRealHero() then
+		--设置信使可以被玩家控制
+		if self.couriers[entity:GetTeamNumber()] then
+			self.couriers[entity:GetTeamNumber()]:SetControllableByPlayer(entity:GetPlayerID(), true)
+		end
+
+		
+	end
+
 	entity:SetDeathXP(entity:GetDeathXP()*2)
 	
 	
