@@ -1,5 +1,7 @@
 require('timers')
 require('settings')
+
+LinkLuaModifier("modifier_core_courier", LUA_MODIFIER_MOTION_NONE)
 HERO_SELECTION_TIME = 50               -- How long should we let people select their hero?
 MEEPO_FLAG=0;
 RUNE_SPAWN_TIME = 120					-- How long in seconds should we wait between rune spawns?
@@ -34,6 +36,8 @@ function CAddonAdvExGameMode:InitGameMode()
 	GameRules:SetGoldPerTick(10) --每分钟金钱增长
 	--GameRules:SetStartingGold(3000) -- 初始化金币
 	ListenToGameEvent("game_rules_state_change", Dynamic_Wrap(CAddonAdvExGameMode,"OnGameRulesStateChange"), self)
+	ListenToGameEvent( "npc_spawned", Dynamic_Wrap( CAddonAdvExGameMode, "OnNPCSpawned" ), self )
+
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter( Dynamic_Wrap(CAddonAdvExGameMode, "ItemAddedFilter"), self )
 	--ListenToGameEvent("player_spawn", Dynamic_Wrap(CAddonAdvExGameMode, "OnPlayerSpawn"), self)
 	ListenToGameEvent("npc_spawned", Dynamic_Wrap(CAddonAdvExGameMode, "OnNPCSpawn"), self)
@@ -51,13 +55,29 @@ function CAddonAdvExGameMode:InitGameMode()
 	--GameRules:SetRuneMinimapIconScale( 0.7 )
 	--GameRules:SetGoldTickTime( 60.0 )
 	GameRules:SetGoldPerTick( 1.7 )
-
+	--角色时间0
+	GameRules:SetStrategyTime( 0.0 )
+	--开始动画时间0
+	GameRules:SetShowcaseTime( 0.0 )
 	
 	--GameRules:GetGameModeEntity():SetRemoveIllusionsOnDeath( true )
 	--GameRules:GetGameModeEntity():SetTopBarTeamValuesOverride( true )
 	--GameRules:GetGameModeEntity():SetTopBarTeamValuesVisible( false )
+	self.couriers = {}
 end
 
+function CAddonAdvExGameMode:OnNPCSpawned( event )
+	local spawnedUnit = EntIndexToHScript( event.entindex )
+
+	if spawnedUnit:IsRealHero() then
+		--设置信使可以被玩家控制
+		if self.couriers[spawnedUnit:GetTeamNumber()] then
+			self.couriers[spawnedUnit:GetTeamNumber()]:SetControllableByPlayer(spawnedUnit:GetPlayerID(), true)
+		end
+
+		
+	end
+end
 
 function CAddonAdvExGameMode:OnGameRulesStateChange( keys )
         print("OnGameRulesStateChange")
@@ -72,10 +92,71 @@ function CAddonAdvExGameMode:OnGameRulesStateChange( keys )
     
         if newState == DOTA_GAMERULES_STATE_HERO_SELECTION then
                 print("Player begin select hero")  --玩家处于选择英雄界面
- 
+ 		elseif newState == DOTA_GAMERULES_STATE_STRATEGY_TIME then --策略页面
+	 			local ggp = 0
+				local bgp = 0
+				local ggcolor = {
+					{70,70,255},
+					{0,255,255},
+					{255,0,255},
+					{255,255,0},
+					{255,165,0},
+					{0,255,0},
+					{255,0,0},
+					{75,0,130},
+					{109,49,19},
+					{255,20,147},
+					{128,128,0},
+					{255,255,255}
+				}
+				local bgcolor = {
+					{255,135,195},
+					{160,180,70},
+					{100,220,250},
+					{0,128,0},
+					{165,105,0},
+					{153,50,204},
+					{0,128,128},
+					{0,0,165},
+					{128,0,0},
+					{180,255,180},
+					{255,127,80},
+					{0,0,0}
+				}
+				for i=0, PlayerResource:GetPlayerCount()-1 do
+					if PlayerResource:GetTeam(i) == DOTA_TEAM_GOODGUYS then
+						ggp = ggp + 1
+						PlayerResource:SetCustomPlayerColor(i,ggcolor[ggp][1],ggcolor[ggp][2],ggcolor[ggp][3])
+					end
+					if PlayerResource:GetTeam(i) == DOTA_TEAM_BADGUYS then
+						bgp = bgp + 1
+						PlayerResource:SetCustomPlayerColor(i,bgcolor[bgp][1],bgcolor[bgp][2],bgcolor[bgp][3])
+					end
+				end
+ 				for i=0, DOTA_MAX_TEAM_PLAYERS do
+		            if PlayerResource:IsValidPlayer(i) then
+		                if PlayerResource:HasSelectedHero(i) == false then
+
+		                    local player = PlayerResource:GetPlayer(i)
+		                    player:MakeRandomHeroSelection()
+
+		                    local hero_name = PlayerResource:GetSelectedHeroName(i)
+		                end
+		            end
+		        end
         elseif newState == DOTA_GAMERULES_STATE_PRE_GAME then
                 print("Player ready game begin")  --玩家处于游戏准备状态
- 
+ 				local courier_spawn = {}
+				courier_spawn[2] = Entities:FindByClassname(nil, "info_courier_spawn_radiant")
+				courier_spawn[3] = Entities:FindByClassname(nil, "info_courier_spawn_dire")
+				print(courier_spawn[0]);
+				print(courier_spawn[1]);
+				print(courier_spawn[2]);
+				print(courier_spawn[3]);
+				for team = 2, 3 do
+					self.couriers[team] = CreateUnitByName("npc_dota_courier", courier_spawn[team]:GetAbsOrigin(), true, nil, nil, team)
+					self.couriers[team]:AddNewModifier(self.couriers[team], nil, "modifier_core_courier", {})
+				end
         elseif newState == DOTA_GAMERULES_STATE_GAME_IN_PROGRESS then
                 print("Player game begin")  --玩家开始游戏
  
