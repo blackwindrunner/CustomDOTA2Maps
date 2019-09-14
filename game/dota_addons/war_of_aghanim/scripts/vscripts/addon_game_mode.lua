@@ -55,7 +55,7 @@ function CAddonAdvExGameMode:InitGameMode()
 	--GameRules:SetRuneMinimapIconScale( 0.7 )
 	--GameRules:SetGoldTickTime( 60.0 )
 	GameRules:SetGoldPerTick( 1.7 )
-	--角色时间0
+	--决策时间0
 	GameRules:SetStrategyTime( 0.0 )
 	--开始动画时间0
 	GameRules:SetShowcaseTime( 0.0 )
